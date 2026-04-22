@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="IntelliQuery.Api/IntelliQuery.Api.csproj" />
+  <Project Path="IntelliQuery.Application/IntelliQuery.Application.csproj" />
+  <Project Path="IntelliQuery.Domain/IntelliQuery.Domain.csproj" />
+  <Project Path="IntelliQuery.Infrastructure/IntelliQuery.Infrastructure.csproj" />
+</Solution>
