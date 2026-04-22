@@ -1,0 +1,13 @@
+OrderDate,Region,Category,Revenue,Units,IsPromo
+2024-01-01,West,Electronics,1200.50,3,true
+2024-01-02,East,Furniture,850.00,1,false
+2024-01-03,North,Electronics,640.75,2,true
+2024-01-04,South,Clothing,300.25,5,false
+2024-01-05,West,Furniture,1500.00,2,true
+2024-01-06,East,Clothing,220.10,4,false
+2024-01-07,North,Electronics,980.00,3,true
+2024-01-08,South,Furniture,430.50,1,false
+2024-01-09,West,Clothing,125.75,2,false
+2024-01-10,East,Electronics,2100.00,4,true
+2024-01-11,North,Furniture,760.00,2,false
+2024-01-12,South,Clothing,310.90,6,true
