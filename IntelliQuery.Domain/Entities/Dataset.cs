@@ -13,6 +13,7 @@ namespace IntelliQuery.Domain.Entities
         // Navigation properties
         public ICollection<DatasetFile> Files { get; set; } = new List<DatasetFile>();
         public ICollection<DatasetColumn> Columns { get; set; } = new List<DatasetColumn>();
+        public ICollection<DatasetRow> Rows { get; set; } = new List<DatasetRow>();
 
     }
 }

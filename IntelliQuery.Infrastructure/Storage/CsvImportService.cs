@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Globalization;
 using CsvHelper;
 using IntelliQuery.Application.Abstractions;
@@ -46,9 +47,11 @@ namespace IntelliQuery.Infrastructure.Storage
                 }
 
                 var samples = new List<Dictionary<string, string?>>();
+                var datasetRows = new List<DatasetRow>();
+                var rowNumber = 1;
                 const int sampleSize = 25;
 
-                while (await csv.ReadAsync() && samples.Count < sampleSize)
+                while (await csv.ReadAsync())
                 {
                     var row = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
@@ -57,7 +60,19 @@ namespace IntelliQuery.Infrastructure.Storage
                         row[header] = csv.GetField(header);
                     }
 
-                    samples.Add(row);
+                    if (samples.Count < sampleSize)
+                    {
+                        samples.Add(new Dictionary<string, string?>(row, StringComparer.OrdinalIgnoreCase));
+                    }
+
+                    datasetRows.Add(new DatasetRow
+                    {
+                        Id = Guid.NewGuid(),
+                        DatasetId = datasetId,
+                        RowNumber = rowNumber++,
+                        JsonData = JsonSerializer.Serialize(row),
+                        CreatedAtUtc = DateTime.UtcNow
+                    });
                 }
 
                 var existingColumns = await _dbContext.DatasetColumns
@@ -67,6 +82,15 @@ namespace IntelliQuery.Infrastructure.Storage
                 if (existingColumns.Count > 0)
                 {
                     _dbContext.DatasetColumns.RemoveRange(existingColumns);
+                }
+
+                var existingRows = await _dbContext.DatasetRows
+                    .Where(x => x.DatasetId == datasetId)
+                    .ToListAsync(cancellationToken);
+
+                if (existingRows.Count > 0)
+                {
+                    _dbContext.DatasetRows.RemoveRange(existingRows);
                 }
 
                 var columns = headers.Select(header =>
@@ -85,7 +109,7 @@ namespace IntelliQuery.Infrastructure.Storage
                     {
                         var numericValues = values
                             .Where(v => double.TryParse(v, out _))
-                            .Select(double.Parse)
+                            .Select(v => double.Parse(v!))
                             .ToList();
 
                         if (numericValues.Count > 0)
@@ -108,6 +132,7 @@ namespace IntelliQuery.Infrastructure.Storage
                 }).ToList();
 
                 _dbContext.DatasetColumns.AddRange(columns);
+                _dbContext.DatasetRows.AddRange(datasetRows);
 
                 importJob.Status = "Completed";
                 importJob.CompletedAtUtc = DateTime.UtcNow;

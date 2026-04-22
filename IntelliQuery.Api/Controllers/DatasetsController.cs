@@ -4,6 +4,7 @@ using IntelliQuery.Domain.Entities;
 using IntelliQuery.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace IntelliQuery.Api.Controllers
 {
@@ -148,6 +149,42 @@ namespace IntelliQuery.Api.Controllers
                         x.MaxValue
                     })
             });
+        }
+
+        [HttpGet("{id:guid}/rows")]
+        public async Task<ActionResult<object>> GetRows(Guid id, [FromQuery] int take = 50, CancellationToken cancellationToken = default)
+        {
+            if (take <= 0)
+            {
+                take = 50;
+            }
+
+            if (take > 200)
+            {
+                take = 200;
+            }
+
+            var datasetExists = await _dbContext.Datasets
+                .AnyAsync(x => x.Id == id, cancellationToken);
+
+            if (!datasetExists)
+            {
+                return NotFound();
+            }
+
+            var rows = await _dbContext.DatasetRows
+                .Where(x => x.DatasetId == id)
+                .OrderBy(x => x.RowNumber)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+
+            var result = rows.Select(x => new
+            {
+                x.RowNumber,
+                Data = JsonSerializer.Deserialize<Dictionary<string, object?>>(x.JsonData)
+            });
+
+            return Ok(result);
         }
     }
 }

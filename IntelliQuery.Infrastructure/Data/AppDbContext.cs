@@ -16,6 +16,7 @@ namespace IntelliQuery.Infrastructure.Data
         public DbSet<DatasetFile> DatasetFiles => Set<DatasetFile>();
         public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
         public DbSet<DatasetColumn> DatasetColumns => Set<DatasetColumn>();
+        public DbSet<DatasetRow> DatasetRows => Set<DatasetRow>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
