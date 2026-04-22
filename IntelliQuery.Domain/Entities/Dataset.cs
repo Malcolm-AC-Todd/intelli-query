@@ -11,7 +11,7 @@ namespace IntelliQuery.Domain.Entities
         public DateTime CreatedAtUtc { get; set; }
 
         // Navigation properties
-        public ICollection<DatasetFile> files { get; set; } = new List<DatasetFile>();
+        public ICollection<DatasetFile> Files { get; set; } = new List<DatasetFile>();
         public ICollection<DatasetColumn> Columns { get; set; } = new List<DatasetColumn>();
 
     }

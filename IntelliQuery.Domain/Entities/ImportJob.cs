@@ -4,7 +4,7 @@ using System.Text;
 
 namespace IntelliQuery.Domain.Entities
 {
-    internal class ImportJob
+    public class ImportJob
     {
         public Guid Id { get; set; }
         public Guid DatasetId { get; set; }
