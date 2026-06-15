@@ -186,5 +186,128 @@ namespace IntelliQuery.Api.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("{id:guid}/query")]
+        public async Task<ActionResult<DatasetQueryResponse>> QueryDataset(Guid id, [FromBody] DatasetQueryRequest request, CancellationToken cancellationToken)
+        {
+            var datasetExists = await _dbContext.Datasets
+                .AnyAsync(x => x.Id == id, cancellationToken);
+
+            if (!datasetExists)
+            {
+                return NotFound();
+            }
+
+            var rows = await _dbContext.DatasetRows
+                .Where(x => x.DatasetId == id)
+                .OrderBy(x => x.RowNumber)
+                .ToListAsync(cancellationToken);
+
+            var data = rows
+                .Select(x => JsonSerializer.Deserialize<Dictionary<string, string?>>(x.JsonData))
+                .Where(x => x is not null)
+                .Select(x => x!)
+                .ToList();
+
+            var queryType = request.QueryType.Trim().ToLowerInvariant();
+
+            return queryType switch
+            {
+                "row_count" => Ok(new DatasetQueryResponse
+                {
+                    QueryType = queryType,
+                    Result = new
+                    {
+                        Count = data.Count
+                    }
+                }),
+
+                "sum_by_group" => Ok(new DatasetQueryResponse
+                {
+                    QueryType = queryType,
+                    Result = SumByGroup(data, request.GroupByColumn, request.ValueColumn)
+                }),
+
+                "top_numeric" => Ok(new DatasetQueryResponse
+                {
+                    QueryType = queryType,
+                    Result = TopNumeric(data, request.ValueColumn, request.Take)
+                }),
+
+                _ => BadRequest($"Unsupported query type: {request.QueryType}")
+            };
+        }
+
+        //Helper functions for query processing
+        private static object SumByGroup(List<Dictionary<string, string?>> rows, string? groupByColumn, string? valueColumn)
+        {
+            if (string.IsNullOrWhiteSpace(groupByColumn))
+            {
+                return new { Error = "GroupByColumn is required." };
+            }
+
+            if (string.IsNullOrWhiteSpace(valueColumn))
+            {
+                return new { Error = "ValueColumn is required." };
+            }
+
+            var result = rows
+                .Where(row => row.ContainsKey(groupByColumn) && row.ContainsKey(valueColumn))
+                .GroupBy(row =>
+                {
+                    var groupValue = row[groupByColumn];
+                    return string.IsNullOrWhiteSpace(groupValue) ? "(blank)" : groupValue;
+                })
+                .Select(group => new
+                {
+                    Group = group.Key,
+                    Sum = group.Sum(row =>
+                    {
+                        var value = row[valueColumn];
+                        return double.TryParse(value, out var number) ? number : 0;
+                    })
+                })
+                .OrderByDescending(x => x.Sum)
+                .ToList();
+
+            return result;
+        }
+
+        private static object TopNumeric(List<Dictionary<string, string?>> rows, string? valueColumn, int take)
+        {
+            if (string.IsNullOrWhiteSpace(valueColumn))
+            {
+                return new { Error = "ValueColumn is required." };
+            }
+
+            if (take <= 0)
+            {
+                take = 5;
+            }
+
+            if (take > 50)
+            {
+                take = 50;
+            }
+
+            var result = rows
+                .Where(row => row.ContainsKey(valueColumn))
+                .Select(row => new
+                {
+                    Row = row,
+                    Value = double.TryParse(row[valueColumn], out var number) ? number : (double?)null
+                })
+                .Where(x => x.Value.HasValue)
+                .OrderByDescending(x => x.Value)
+                .Take(take)
+                .Select(x => new
+                {
+                    x.Value,
+                    Data = x.Row
+                })
+                .ToList();
+
+            return result;
+        }
     }
 }
